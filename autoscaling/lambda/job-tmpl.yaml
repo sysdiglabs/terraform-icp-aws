@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    run: add-node
+  name: add-node-10-10-11-123
+spec:
+  template:
+    metadata:
+      labels:
+        run: test
+    spec:
+      restartPolicy: Never
+      containers:
+      - command: [ "/bin/sh","-c" ]
+        args:
+        - >
+          apk --no-cache update && \
+          apk --no-cache add python py-pip py-setuptools ca-certificates curl groff less && \
+          pip --no-cache-dir install awscli;
+          aws s3 cp --recursive s3://${CLUSTER_BACKUP} /installer/cluster;
+          mkdir -p /installer/cluster/images;
+          chmod 400 /installer/cluster/ssh_key;
+          rm -f /installer/cluster/.install.lock;
+          aws s3 cp ${IMAGE_LOCATION} /installer/cluster/images;
+          mkdir -p /installer/cluster/docker-engine;
+          aws s3 cp ${DOCKER_PACKAGE_LOCATION} /installer/cluster/docker-engine;
+          crudini --set /installer/cluster/hosts worker ${NODE_IP};
+          /installer/installer.sh install -l ${NODE_IP};
+          aws --region ${REGION} autoscaling complete-lifecycle-action --lifecycle-hook-name ${LIFECYCLEHOOKNAME} --lifecycle-action-token ${LIFECYCLEACTIONTOKEN} --auto-scaling-group-name ${ASGNAME} --lifecycle-action-result CONTINUE --instance-id ${INSTANCEID}
+        image: ibmcom/icp-inception:2.1.0.1-ee
+        imagePullPolicy: IfNotPresent
+        name: test
+        stdin: true
+        tty: true
+        env:
+        - name: LICENSE
+          value: accept
+  backoffLimit: 4

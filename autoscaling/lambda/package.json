@@ -1,0 +1,17 @@
+{
+  "name": "icp-aws-lambda-autoscaling",
+  "version": "0.0.1",
+  "description": "ICP Autoscaling Lambda Function",
+  "files": [
+    "package.json",
+    "common.js",
+    "index.js"
+  ],
+  "main": "index.js",
+  "dependencies": {
+    "kubernetes-client": "4.0.0",
+    "js-yaml": "*"
+  },
+  "devDependencies": {
+  }
+}
