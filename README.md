@@ -34,27 +34,27 @@ In a single availability zone, we divide the network into a public subnet which 
 
 1. (optional) Create an S3 bucket in the same region that the ICP cluster will be created and upload the ICP binaries.  Make note of the bucket name.  You can use the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/awscli-install-bundle.html) to do this.  Note, if you are doing the optional next step, you do not need to do this.
 
-3. (optional) Create an AMI to use as the base image for some or all instances. You can optionally install Docker and pre-load the ICP images.  Make note of the AMI ID.  This can be done using the following steps:
+1. (optional) Create an AMI to use as the base image for some or all instances. You can optionally install Docker and pre-load the ICP images.  Make note of the AMI ID.  This can be done using the following steps:
 
-  1. Create an EC2 Instance in the same region that ICP will be installed in.  Ensure the root disk size is at least 100GB.
+    1. Create an EC2 Instance in the same region that ICP will be installed in.  Ensure the root disk size is at least 100GB.
 
-  2. [Install Docker](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_2.1.0/installing/install_docker.html) in the EC2 Instance.  Make sure Docker starts automatically:
+    2. [Install Docker](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_2.1.0/installing/install_docker.html) in the EC2 Instance.  Make sure Docker starts automatically:
 
-     ```bash
-     systemctl enable docker
-     ```
+        ```bash
+        systemctl enable docker
+        ```
 
-  3. Copy the IBM Cloud Private binary tarball into the EC2 Instance.
+    3. Copy the IBM Cloud Private binary tarball into the EC2 Instance.
 
-  4. Load the images into the local Docker repository.
+    4. Load the images into the local Docker repository.
 
-     ```bash
-     tar xf ibm-cloud-private-x86_64-2.1.0.2.tar.gz -O | sudo docker load
-     ```
+        ```bash
+        tar xf ibm-cloud-private-x86_64-2.1.0.2.tar.gz -O | sudo docker load
+        ```
 
-  5. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/awscli-install-bundle.html).
+    5. Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/awscli-install-bundle.html).
 
-  6. Convert the instance into an AMI.
+    6. Convert the instance into an AMI.
 
 4. Create a file, `terraform.tfvars` containing the values for the following:
 
@@ -100,7 +100,7 @@ To move forward and create the objects, use the following command:
 terraform apply
 ```
 
-This will kick off all infrastructure objects.  Once the infrastructure is created, the installation runs silently on the boot master (i.e. `icp-master01`) until it completes.  To monitor the installation, you can provision a bastion host which is placed on the public subnet and use it as a jumpbox into the `icp-master01` host.  The installation output will be written to `/var/log/cloud-init-output.log`.
+This will kick off all infrastructure objects.  Once the infrastructure is created, the installation runs silently on the boot master (i.e. `icp-master01`) until it completes.  To monitor the installation, you can provision a bastion host which is placed on the public subnet and use it as a jumpbox into the `icp-master01` host by updating `variables.tf` and setting the number of bastion nodes to 1.  The installation output will be written to `/var/log/cloud-init-output.log`.  Bastion hosts are not required for normal operation of the cluster.
 
 When the installation completes,  the `/opt/ibm/cluster` directory on the boot master (i.e. `icp-master01`) is backed up to S3 in a bucket named `icpbackup-<clusterid>`, which can be used in master recovery in case one of the master nodes fails.  It is recommended after every time `terraform apply` is performed, to commit the `terraform.tfstate` into git so that the state is stored in source control.
 
