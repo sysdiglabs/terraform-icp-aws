@@ -28,14 +28,13 @@ module "icpautoscaling" {
 
     aws_region            = "${var.aws_region}"
     azs                   = ["${var.azs}"]
-    ami                   = "${var.worker["ami"] != "" ? var.worker["ami"] : data.aws_ami.ubuntu.id }"
+    ami                   = "${var.worker["ami"] != "" ? var.worker["ami"] : local.default_ami }"
     worker_root_disk_size = "${var.worker["disk"]}"
     worker_docker_vol_size = "${var.worker["docker_vol"]}"
     key_name              = "${var.key_name}"
     instance_type         = "${var.worker["type"]}"
     security_groups = [
-      "${aws_security_group.default.id}",
-      "${aws_security_group.workers.id}"
+      "${aws_security_group.default.id}"
     ]
     private_domain = "${var.private_domain}"
     private_subnet_cidr = "${aws_subnet.icp_private_subnet.*.cidr_block}"

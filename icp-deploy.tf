@@ -20,13 +20,23 @@ resource "aws_s3_bucket_object" "hostfile" {
 ${join("\n", formatlist("%v", aws_network_interface.mastervip.*.private_ip))}
 
 [proxy]
-${join("\n", formatlist("%v", aws_network_interface.proxyvip.*.private_ip))}
+${var.proxy["nodes"] > 0 ?
+  join("\n", formatlist("%v", aws_network_interface.proxyvip.*.private_ip)) :
+  join("\n", formatlist("%v", aws_network_interface.mastervip.*.private_ip))
+}
 
 [management]
-${join("\n", formatlist("%v", aws_instance.icpmanagement.*.private_ip))}
+${var.management["nodes"] > 0 ?
+  join("\n", formatlist("%v", aws_instance.icpmanagement.*.private_ip)) :
+  join("\n", formatlist("%v", aws_network_interface.mastervip.*.private_ip))
+}
 
+${var.va["nodes"] > 0 ? "
 [va]
 ${join("\n", formatlist("%v", aws_instance.icpva.*.private_ip))}
+" :
+""
+}
 
 [worker]
 ${join("\n", formatlist("%v", aws_instance.icpnodes.*.private_ip))}

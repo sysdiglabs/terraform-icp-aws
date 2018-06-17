@@ -1,3 +1,6 @@
+locals  {
+  proxy_node_ids = "${compact(concat(aws_instance.icpproxy.*.id, aws_instance.icpmaster.*.id))}"
+}
 
 resource "aws_lb_target_group" "icp-console-8443" {
   name = "icp-${random_id.clusterid.hex}-master-8443-tg"
@@ -74,7 +77,6 @@ resource "aws_lb_listener" "icp-kubernetes-api-8001" {
   }
 }
 
-
 resource "aws_lb_target_group_attachment" "master-8443" {
   count = "${var.master["nodes"]}"
   target_group_arn = "${aws_lb_target_group.icp-console-8443.arn}"
@@ -107,7 +109,11 @@ resource "aws_lb_target_group_attachment" "master-8500" {
 }
 
 resource "aws_lb" "icp-console" {
-  name = "icp-console"
+  depends_on = [
+    "aws_internet_gateway.icp_gw"
+  ]
+
+  name = "icp-${random_id.clusterid.hex}-console"
   load_balancer_type = "network"
 #  internal = "true"
 
@@ -134,17 +140,17 @@ resource "aws_lb_target_group" "icp-proxy-80" {
 }
 
 resource "aws_lb_target_group_attachment" "icp-proxy-443" {
-  count = "${var.proxy["nodes"]}"
+  count = "${var.proxy["nodes"] > 0 ? var.proxy["nodes"] : var.master["nodes"]}"
   target_group_arn = "${aws_lb_target_group.icp-proxy-443.arn}"
-  target_id = "${element(aws_instance.icpproxy.*.id, count.index)}"
+  target_id = "${element(local.proxy_node_ids, count.index)}"
   port = 443
 
 }
 
 resource "aws_lb_target_group_attachment" "icp-proxy-80" {
-  count = "${var.proxy["nodes"]}"
+  count = "${var.proxy["nodes"] > 0 ? var.proxy["nodes"] : var.master["nodes"]}"
   target_group_arn = "${aws_lb_target_group.icp-proxy-80.arn}"
-  target_id = "${element(aws_instance.icpproxy.*.id, count.index)}"
+  target_id = "${element(local.proxy_node_ids, count.index)}"
   port = 80
 
 }
@@ -170,7 +176,11 @@ resource "aws_lb_listener" "icp-proxy-80" {
 }
 
 resource "aws_lb" "icp-proxy" {
-  name = "icp-proxy"
+  depends_on = [
+    "aws_internet_gateway.icp_gw"
+  ]
+
+  name = "icp-${random_id.clusterid.hex}-proxy"
   load_balancer_type = "network"
 
   # The same availability zone as our instance

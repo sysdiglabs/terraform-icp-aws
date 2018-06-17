@@ -27,62 +27,6 @@ resource "aws_security_group" "default" {
   )}"
 }
 
-resource "aws_security_group" "workers" {
-  name = "icp_workers_sg-${random_id.clusterid.hex}"
-  description = "Security group for ICP worker nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  ingress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    self        = true
-  }
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-workers-sg-${random_id.clusterid.hex}")
-  )}"
-}
-
-resource "aws_security_group" "management" {
-  count = "${var.management["nodes"] > 0 ? 1 : 0 }"
-  name = "icp_management_sg-${random_id.clusterid.hex}"
-  description = "Security group for ICP management nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true
-  }
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-management-sg-${random_id.clusterid.hex}")
-  )}"
-}
-
-resource "aws_security_group" "va" {
-  count = "${var.va["nodes"] > 0 ? 1 : 0 }"
-  name = "icp_va_sg-${random_id.clusterid.hex}"
-  description = "Security group for ICP va nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    self        = true
-  }
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-va-sg-${random_id.clusterid.hex}")
-  )}"
-}
-
 resource "aws_security_group_rule" "bastion-22-ingress" {
   count = "${var.bastion["nodes"] > 0 ? length(var.allowed_cidr_bastion_22) : 0}"
   type = "ingress"

@@ -110,9 +110,28 @@ data "aws_vpc_endpoint_service" "s3" {
   service = "s3"
 }
 
+data "aws_vpc_endpoint_service" "ec2" {
+  service = "ec2"
+}
+
 resource "aws_vpc_endpoint" "private_s3" {
   vpc_id       = "${aws_vpc.icp_vpc.id}"
   service_name = "${data.aws_vpc_endpoint_service.s3.service_name}"
+}
+
+resource "aws_vpc_endpoint" "private_ec2" {
+  vpc_id       = "${aws_vpc.icp_vpc.id}"
+  service_name = "${data.aws_vpc_endpoint_service.ec2.service_name}"
+  vpc_endpoint_type = "Interface"
+  private_dns_enabled = true
+
+  security_group_ids = [
+    "${aws_security_group.default.id}"
+  ]
+
+  subnet_ids = [
+    "${aws_subnet.icp_private_subnet.*.id}"
+  ]
 }
 
 resource "aws_vpc_endpoint_route_table_association" "private_s3" {
