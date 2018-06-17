@@ -18,7 +18,7 @@ ubuntu_install(){
 }
 
 crlinux_install() {
-  yum install -y \
+  until yum install -y \
     unzip \
     PyYAML \
     device-mapper \
@@ -27,16 +27,18 @@ crlinux_install() {
     libcgroup \
     iptables \
     device-mapper-persistent-data \
-    nfs-util \
-    lvm2
+    nfs-utils \
+    lvm2; do
+    sleep 2
+  done
 }
 
 awscli_install() {
   # already installed, exit
-  which aws
+  export awscli=`which aws`
 
-  if [ $? -eq 0 ]; then
-    /usr/local/bin/aws --version
+  if [ ! -z "${awscli}" ]; then
+    ${awscli} --version
     return 0
   fi
 
@@ -46,6 +48,7 @@ awscli_install() {
   curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
   unzip awscli-bundle.zip
   ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
+  export awscli=/usr/local/bin/aws
 }
 
 docker_install() {
@@ -97,43 +100,43 @@ docker_install() {
   storage_driver=`docker info | grep 'Storage Driver:' | cut -d: -f2 | sed -e 's/\s//g'`
   echo "storage driver is ${storage_driver}"
   if [ "${storage_driver}" == "devicemapper" ]; then
-    # check if loop lvm mode is enabled
-    if [ -z `docker info | grep 'loop file'` ]; then
-      echo "Direct-lvm mode is already configured."
-      return 0
-    fi
+    systemctl stop docker
 
-    # TODO if docker block device is not provided, make sure we use overlay2 storage driver
-    if [ -z "${docker_disk}" ]; then
-      echo "docker loop-lvm mode is configured and a docker block device was not specified!  This is not recommended for production!"
-      return 0
-    fi
+    # remove storage-driver from docker cmdline
+    sed -i -e '/ExecStart/ s/--storage-driver=devicemapper//g' /usr/lib/systemd/system/docker.service
 
-    echo "A docker disk ${docker_disk} is provided, setting up direct-lvm mode ..."
-
-    # docker installer uses devicemapper already
+    # docker installer uses devicemapper already; switch to overlay2
     cat > /tmp/daemon.json <<EOF
 {
+  "storage-driver": "overlay2",
   "storage-opts": [
-    "dm.directlvm_device=${docker_disk}"
+    "overlay2.override_kernel_check=true"
   ]
 }
 EOF
-  else
-    echo "Setting up devicemapper with direct-lvm mode ..."
+    mv /tmp/daemon.json /etc/docker/daemon.json
 
-    cat > /tmp/daemon.json <<EOF
-{
-  "storage-driver": "devicemapper",
-  "storage-opts": [
-    "dm.directlvm_device=${docker_disk}"
-  ]
-}
-EOF
+    systemctl daemon-reload
   fi
 
-  mv /tmp/daemon.json /etc/docker/daemon.json
-  systemctl restart docker
+  if [ ! -z "${docker_disk}" ]; then
+    echo "Setting up ${docker_disk} and mounting at /var/lib/docker ..."
+    systemctl stop docker
+
+    sudo mv /var/lib/docker /var/lib/docker.bk
+    sudo mkdir -p /var/lib/docker
+    sudo parted -s -a optimal ${docker_disk} mklabel gpt -- mkpart primary xfs 1 -1
+
+    sudo partprobe
+
+    sudo mkfs.xfs -n ftype=1 ${docker_disk}1
+    echo "${docker_disk}1  /var/lib/docker   xfs  defaults   0 0" | sudo tee -a /etc/fstab
+    sudo mount -a
+
+    sudo mv /var/lib/docker.bk/* /var/lib/docker
+    rm -rf /var/lib/docker.bk
+    systemctl start docker
+  fi
 
   # docker takes a while to start because it needs to prepare the
   # direct-lvm device ... loop here until it's running
@@ -169,7 +172,7 @@ image_load() {
     if [[ "${image_location:0:2}" == "s3" ]]; then
       # stream it right out of s3 into docker
       echo "Load docker images from ${image_location} ..."
-      /usr/local/bin/aws s3 cp ${image_location} - | tar zxf - -O | docker load
+      ${awscli} s3 cp ${image_location} - | tar zxf - -O | docker load
     fi
   fi
 }

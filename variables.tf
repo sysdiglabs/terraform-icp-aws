@@ -60,6 +60,8 @@ variable "pub_subnet_cidrs" {
 variable "ec2_iam_role_name" { default = "icp-ec2-iam" }
 variable "private_domain" { default = "icp-cluster.icp" }
 
+variable "ami" { default = "" }
+
 # EC2 instances
 # no bastion host by default.  set to 1 if you want to debug
 variable "bastion" {

@@ -1,6 +1,6 @@
 # Generate a new key if this is required for deployment
 resource "random_id" "clusterid" {
-  byte_length = "4"
+  byte_length = "2"
 }
 
 locals  {
@@ -16,6 +16,7 @@ locals  {
     var.docker_package_location :
       var.docker_package_location == "" ? "" : "s3://${element(concat(aws_s3_bucket.icp_binaries.*.id, list("")), 0)}/icp-docker.bin"}"
   lambda_s3_bucket = "${element(concat(aws_s3_bucket.icp_lambda.*.id, list("")), 0)}"
+  default_ami = "${var.ami != "" ? var.ami : data.aws_ami.rhel.id}"
 }
 
 ## Search for a default Ubuntu image to allow this option
@@ -35,7 +36,7 @@ data "aws_ami" "rhel" {
   filter {
     name   = "name"
     // values = ["ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"]
-    values = ["RHEL-7.4_HVM-*-x86_64-2-Hourly2-GP2"]
+    values = ["RHEL*7.5_HVM*x86_64*Hourly*GP2"]
   }
 
   filter {
@@ -79,7 +80,7 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "bastion" {
   count         = "${var.bastion["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.bastion["ami"] != "" ? var.bastion["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.bastion["ami"] != "" ? var.bastion["ami"] : local.default_ami }"
   instance_type = "${var.bastion["type"]}"
   subnet_id     = "${element(aws_subnet.icp_public_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
@@ -123,7 +124,7 @@ resource "aws_instance" "icpmaster" {
 
   count         = "${var.master["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.master["ami"] != "" ? var.master["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.master["ami"] != "" ? var.master["ami"] : local.default_ami }"
   instance_type = "${var.master["type"]}"
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -150,7 +151,7 @@ resource "aws_instance" "icpmaster" {
 
   tags = "${merge(
     var.default_tags,
-    map("Name", "${format("${var.instance_name}-master%02d", count.index + 1) }"),
+    map("Name", "${format("${var.instance_name}-${random_id.clusterid.hex}-master%02d", count.index + 1) }"),
     map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
   )}"
 
@@ -159,7 +160,6 @@ resource "aws_instance" "icpmaster" {
 packages:
   - unzip
   - python
-  - ansible
 rh_subscription:
   enable-repo: rhui-REGION-rhel-server-optional
 write_files:
@@ -195,14 +195,14 @@ ${count.index == 0 ? "
   :
   "" }
 ${count.index == 0 && var.enable_autoscaling ? "
-  - /tmp/icp_scripts/create_client_cert.sh -i ${var.icp_inception_image} -b ${local.lambda_s3_bucket}
+  - /tmp/icp_scripts/create_client_cert.sh -i ${var.icp_inception_image} -b ${aws_s3_bucket.icp_config_backup.id}
   "
   :
   "" }
-mounts:
 ${var.master["nodes"] > 1 ? "
-  - ['${element(local.efs_registry_mountpoints, count.index)}:/', /var/lib/registry, nfs4, nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2, 0, 0]
-  - ['${element(local.efs_audit_mountpoints, count.index)}:/', /var/lib/icp/audit, nfs4, nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2, 0, 0]
+mounts:
+  - ['${element(local.efs_registry_mountpoints, count.index)}:/', '/var/lib/registry', 'nfs4', 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2', '0', '0']
+  - ['${element(local.efs_audit_mountpoints, count.index)}:/', '/var/lib/icp/audit', 'nfs4', 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2', '0', '0']
 "
 :
 "" }
@@ -231,7 +231,7 @@ resource "aws_instance" "icpproxy" {
 
   count         = "${var.proxy["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.proxy["ami"] != "" ? var.proxy["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.proxy["ami"] != "" ? var.proxy["ami"] : local.default_ami }"
   instance_type = "${var.proxy["type"]}"
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -257,7 +257,7 @@ resource "aws_instance" "icpproxy" {
 
   tags = "${merge(
     var.default_tags,
-    map("Name", "${format("${var.instance_name}-proxy%02d", count.index + 1) }"),
+    map("Name", "${format("${var.instance_name}-${random_id.clusterid.hex}-proxy%02d", count.index + 1) }"),
     map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
   )}"
 
@@ -301,12 +301,11 @@ resource "aws_instance" "icpmanagement" {
 
   count         = "${var.management["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.management["ami"] != "" ? var.management["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.management["ami"] != "" ? var.management["ami"] : local.default_ami }"
   instance_type = "${var.management["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
-    "${aws_security_group.default.id}",
-    "${aws_security_group.management.id}"
+    "${aws_security_group.default.id}"
   ]
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -327,7 +326,7 @@ resource "aws_instance" "icpmanagement" {
 
   tags = "${merge(
     var.default_tags,
-    map("Name",  "${format("${var.instance_name}-management%02d", count.index + 1) }"),
+    map("Name",  "${format("${var.instance_name}-${random_id.clusterid.hex}-management%02d", count.index + 1) }"),
     map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
   )}"
 
@@ -370,12 +369,11 @@ resource "aws_instance" "icpva" {
 
   count         = "${var.va["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.va["ami"] != "" ? var.va["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.va["ami"] != "" ? var.va["ami"] : local.default_ami }"
   instance_type = "${var.va["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
-    "${aws_security_group.default.id}",
-    "${aws_security_group.va.id}"
+    "${aws_security_group.default.id}"
   ]
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -396,7 +394,7 @@ resource "aws_instance" "icpva" {
 
   tags = "${merge(
     var.default_tags,
-    map("Name",  "${format("${var.instance_name}-va%02d", count.index + 1) }"),
+    map("Name",  "${format("${var.instance_name}-${random_id.clusterid.hex}-va%02d", count.index + 1) }"),
     map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
   )}"
 
@@ -443,12 +441,11 @@ resource "aws_instance" "icpnodes" {
   ]
 
   key_name      = "${var.key_name}"
-  ami           = "${var.worker["ami"] != "" ? var.worker["ami"] : data.aws_ami.ubuntu.id }"
+  ami           = "${var.worker["ami"] != "" ? var.worker["ami"] : local.default_ami }"
   instance_type = "${var.worker["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
-    "${aws_security_group.default.id}",
-    "${aws_security_group.workers.id}"
+    "${aws_security_group.default.id}"
   ]
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -469,7 +466,7 @@ resource "aws_instance" "icpnodes" {
 
   tags = "${merge(
     var.default_tags,
-    map("Name",  "${format("${var.instance_name}-worker%02d", count.index + 1) }"),
+    map("Name",  "${format("${var.instance_name}-${random_id.clusterid.hex}-worker%02d", count.index + 1) }"),
     map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
   )}"
 
@@ -509,25 +506,30 @@ output "bootmaster" {
 }
 
 resource "aws_network_interface" "mastervip" {
-  count           = "${length(var.azs)}"
+  count           = "${var.master["nodes"]}"
   subnet_id       = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   private_ips_count = 1
 
   security_groups = [
-    "${aws_security_group.default.id}",
-    "${aws_security_group.master-8001.id}",
-    "${aws_security_group.master-8443.id}",
-    "${aws_security_group.master-8500.id}",
-    "${aws_security_group.master-9443.id}"
+    "${compact(
+        list(
+          aws_security_group.default.id,
+          aws_security_group.master-8001.id,
+          aws_security_group.master-8443.id,
+          aws_security_group.master-8500.id,
+          aws_security_group.master-9443.id,
+          var.proxy["nodes"] == 0 ? aws_security_group.proxy-80.id : "",
+          var.proxy["nodes"] == 0 ? aws_security_group.proxy-443.id : ""
+      ))}"
   ]
+
   tags = "${merge(var.default_tags, map(
-   "Name", "${format("${var.instance_name}-master%02d", count.index + 1) }"
+   "Name", "${format("${var.instance_name}-${random_id.clusterid.hex}-master%02d", count.index + 1) }"
  ))}"
 }
 
-
 resource "aws_network_interface" "proxyvip" {
-  count           = "${length(var.azs)}"
+  count           = "${var.proxy["nodes"]}"
   subnet_id       = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   private_ips_count = 1
 
@@ -538,6 +540,6 @@ resource "aws_network_interface" "proxyvip" {
   ]
 
   tags = "${merge(var.default_tags, map(
-    "Name", "${format("${var.instance_name}-proxy%02d", count.index + 1) }"
+    "Name", "${format("${var.instance_name}-${random_id.clusterid.hex}-proxy%02d", count.index + 1) }"
   ))}"
 }
