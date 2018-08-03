@@ -33,23 +33,7 @@ crlinux_install() {
   done
 }
 
-awscli_install() {
-  # already installed, exit
-  export awscli=`which aws`
-
-  if [ ! -z "${awscli}" ]; then
-    ${awscli} --version
-    return 0
-  fi
-
-  echo "installing aws cli ..."
-  cd /tmp
-  rm -rf awscli-bundle*
-  curl "https://s3.amazonaws.com/aws-cli/awscli-bundle.zip" -o "awscli-bundle.zip"
-  unzip awscli-bundle.zip
-  ./awscli-bundle/install -i /usr/local/aws -b /usr/local/bin/aws
-  export awscli=/usr/local/bin/aws
-}
+awscli=/usr/local/bin/aws
 
 docker_install() {
   echo "Install docker from ${package_location}"
@@ -161,26 +145,36 @@ EOF
 }
 
 image_load() {
-  if [[ ! -z $(docker images -q ${image_bootstrap}) ]]; then
+  if [[ ! -z $(docker images -q ${inception_image}) ]]; then
     # If we don't have an image locally we'll pull from docker hub registry
     echo "Not required to load images. Exiting"
     return 0
   fi
 
   if [[ ! -z "${image_location}" ]]; then
-    # Decide which protocol to use
     if [[ "${image_location:0:2}" == "s3" ]]; then
-      # stream it right out of s3 into docker
       echo "Load docker images from ${image_location} ..."
       ${awscli} s3 cp ${image_location} - | tar zxf - -O | docker load
     fi
   fi
+
+  # if additional patches specified, load the images now
+  for img in `echo "${s3_patch_images}"`; do
+    echo "Load docker images from ${img} ..."
+    if echo ${img} | grep 'tar$'; then
+      ${awscli} s3 cp ${img} - | docker load
+    elif echo ${img} | grep 't.*gz$'; then
+      ${awscli} s3 cp ${img} - | tar zxf - -O | docker load
+    fi
+  done
 }
 
-
 ##### MAIN #####
-while getopts ":p:d:i:s:" arg; do
+while getopts ":a:p:d:i:s:" arg; do
     case "${arg}" in
+      a)
+        s3_patch_images=${OPTARG}
+        ;;
       p)
         package_location=${OPTARG}
         ;;
@@ -191,18 +185,17 @@ while getopts ":p:d:i:s:" arg; do
         image_location=${OPTARG}
         ;;
       s)
-        image_bootstrap=${OPTARG}
+        inception_image=${OPTARG}
         ;;
     esac
 done
 
 
 #Find Linux Distro
-if grep -q -i ubuntu /etc/*release
-  then
-    OSLEVEL=ubuntu
-  else
-    OSLEVEL=other
+if grep -q -i ubuntu /etc/*release; then
+  OSLEVEL=ubuntu
+else
+  OSLEVEL=other
 fi
 echo "Operating System is $OSLEVEL"
 
@@ -213,7 +206,6 @@ else
   crlinux_install
 fi
 
-awscli_install
 docker_install
 image_load
 
