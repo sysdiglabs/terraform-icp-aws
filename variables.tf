@@ -146,6 +146,18 @@ variable "image_location" {
   default     = ""
 }
 
+variable "patch_images" {
+  description = "Additional patch images loaded before install, stored in S3"
+  type        = "list"
+  default     = []
+}
+
+variable "patch_scripts" {
+  description = "Additional patch scripts run after install, stored in S3"
+  type        = "list"
+  default     = []
+}
+
 variable "icp_inception_image" {
   description = "icp-inception bootstrap image repository"
   default     = "ibmcom/icp-inception:2.1.0.2-ee"
@@ -208,6 +220,13 @@ variable "allowed_cidr_master_8500" {
   ]
 }
 
+variable "allowed_cidr_master_8600" {
+  type = "list"
+  default = [
+    "0.0.0.0/0"
+  ]
+}
+
 variable "allowed_cidr_proxy_80" {
   type = "list"
   default = [
@@ -227,4 +246,8 @@ variable "allowed_cidr_bastion_22" {
   default = [
     "0.0.0.0/0"
   ]
+}
+
+variable "use_aws_cloudprovider" {
+  default = "true"
 }

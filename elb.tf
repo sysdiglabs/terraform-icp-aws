@@ -34,6 +34,14 @@ resource "aws_lb_target_group" "icp-registry-8500" {
   vpc_id = "${aws_vpc.icp_vpc.id}"
 }
 
+resource "aws_lb_target_group" "icp-registry-8600" {
+  name = "icp-${random_id.clusterid.hex}-master-8600-tg"
+  port = 8600
+  protocol = "TCP"
+  tags = "${var.default_tags}"
+  vpc_id = "${aws_vpc.icp_vpc.id}"
+}
+
 resource "aws_lb_listener" "icp-console-8443" {
   load_balancer_arn = "${aws_lb.icp-console.arn}"
   port = "8443"
@@ -63,6 +71,16 @@ resource "aws_lb_listener" "icp-registry-8500" {
   protocol = "TCP"
   default_action {
     target_group_arn = "${aws_lb_target_group.icp-registry-8500.arn}"
+    type = "forward"
+  }
+}
+
+resource "aws_lb_listener" "icp-registry-8600" {
+  load_balancer_arn = "${aws_lb.icp-console.arn}"
+  port = "8600"
+  protocol = "TCP"
+  default_action {
+    target_group_arn = "${aws_lb_target_group.icp-registry-8600.arn}"
     type = "forward"
   }
 }
@@ -105,7 +123,13 @@ resource "aws_lb_target_group_attachment" "master-8500" {
   target_group_arn = "${aws_lb_target_group.icp-registry-8500.arn}"
   target_id = "${element(aws_instance.icpmaster.*.id, count.index)}"
   port = 8500
+}
 
+resource "aws_lb_target_group_attachment" "master-8600" {
+  count = "${var.master["nodes"]}"
+  target_group_arn = "${aws_lb_target_group.icp-registry-8600.arn}"
+  target_id = "${element(aws_instance.icpmaster.*.id, count.index)}"
+  port = 8600
 }
 
 resource "aws_lb" "icp-console" {

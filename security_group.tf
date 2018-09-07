@@ -36,7 +36,7 @@ resource "aws_security_group_rule" "bastion-22-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_bastion_22, count.index)}"
   ]
-  security_group_id = "${aws_security_group.bastion-22.id}"
+  security_group_id = "${aws_security_group.bastion.id}"
 }
 
 resource "aws_security_group_rule" "bastion-22-egress" {
@@ -48,18 +48,18 @@ resource "aws_security_group_rule" "bastion-22-egress" {
   cidr_blocks = [
     "0.0.0.0/0"
   ]
-  security_group_id = "${aws_security_group.bastion-22.id}"
+  security_group_id = "${aws_security_group.bastion.id}"
 }
 
-resource "aws_security_group" "bastion-22" {
+resource "aws_security_group" "bastion" {
   count = "${var.bastion["nodes"] > 0 ? 1 : 0}"
-  name = "icp-bastion-22-${random_id.clusterid.hex}"
+  name = "icp-bastion-${random_id.clusterid.hex}"
   description = "allow SSH"
   vpc_id = "${aws_vpc.icp_vpc.id}"
 
   tags = "${merge(
     var.default_tags,
-    map("Name", "icp-bastion-22-${random_id.clusterid.hex}")
+    map("Name", "icp-bastion-${random_id.clusterid.hex}")
   )}"
 }
 
@@ -70,7 +70,7 @@ resource "aws_security_group_rule" "proxy-80-ngw" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.proxy-80.id}"
+    security_group_id = "${aws_security_group.proxy.id}"
     description = "allow icp to contact itself on console endpoint over the nat gateway"
 }
 
@@ -83,28 +83,17 @@ resource "aws_security_group_rule" "proxy-80-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_proxy_80, count.index)}"
   ]
-  security_group_id = "${aws_security_group.proxy-80.id}"
+  security_group_id = "${aws_security_group.proxy.id}"
 }
 
-resource "aws_security_group_rule" "proxy-80-egress" {
-  type = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  cidr_blocks = [
-    "0.0.0.0/0"
-  ]
-  security_group_id = "${aws_security_group.proxy-80.id}"
-}
-
-resource "aws_security_group" "proxy-80" {
-  name = "icp-proxy-80-${random_id.clusterid.hex}"
-  description = "allow http to proxy nodes"
+resource "aws_security_group" "proxy" {
+  name = "icp-proxy-${random_id.clusterid.hex}"
+  description = "ICP ${random_id.clusterid.hex} proxy nodes"
   vpc_id = "${aws_vpc.icp_vpc.id}"
 
   tags = "${merge(
     var.default_tags,
-    map("Name", "icp-proxy-80-${random_id.clusterid.hex}")
+    map("Name", "icp-proxy-${random_id.clusterid.hex}")
   )}"
 }
 
@@ -115,7 +104,7 @@ resource "aws_security_group_rule" "proxy-443-ngw" {
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.proxy-443.id}"
+    security_group_id = "${aws_security_group.proxy.id}"
     description = "allow icp to contact itself on console endpoint over the nat gateway"
 }
 
@@ -128,10 +117,10 @@ resource "aws_security_group_rule" "proxy-443-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_proxy_443, count.index)}"
   ]
-  security_group_id = "${aws_security_group.proxy-443.id}"
+  security_group_id = "${aws_security_group.proxy.id}"
 }
 
-resource "aws_security_group_rule" "proxy-443-egress" {
+resource "aws_security_group_rule" "proxy-egress" {
   type = "egress"
   from_port   = 0
   to_port     = 0
@@ -139,18 +128,7 @@ resource "aws_security_group_rule" "proxy-443-egress" {
   cidr_blocks = [
     "0.0.0.0/0"
   ]
-  security_group_id = "${aws_security_group.proxy-443.id}"
-}
-
-resource "aws_security_group" "proxy-443" {
-  name = "icp-proxy-443-${random_id.clusterid.hex}"
-  description = "allow https to proxy nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-proxy-443-${random_id.clusterid.hex}")
-  )}"
+  security_group_id = "${aws_security_group.proxy.id}"
 }
 
 resource "aws_security_group_rule" "master-8443-ngw" {
@@ -160,7 +138,7 @@ resource "aws_security_group_rule" "master-8443-ngw" {
     to_port     = 8443
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.master-8443.id}"
+    security_group_id = "${aws_security_group.master.id}"
     description = "allow icp to contact itself on console endpoint over the nat gateway"
 }
 
@@ -173,29 +151,7 @@ resource "aws_security_group_rule" "master-8443-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_master_8443, count.index)}"
   ]
-  security_group_id = "${aws_security_group.master-8443.id}"
-}
-
-resource "aws_security_group_rule" "master-8443-egress" {
-  type = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  cidr_blocks = [
-    "0.0.0.0/0"
-  ]
-  security_group_id = "${aws_security_group.master-8443.id}"
-}
-
-resource "aws_security_group" "master-8443" {
-  name = "icp-master-8443-${random_id.clusterid.hex}"
-  description = "allow incoming to master node console"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-master-8443-${random_id.clusterid.hex}")
-  )}"
+  security_group_id = "${aws_security_group.master.id}"
 }
 
 resource "aws_security_group_rule" "master-8001-ingress" {
@@ -207,18 +163,7 @@ resource "aws_security_group_rule" "master-8001-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_master_8001, count.index)}"
   ]
-  security_group_id = "${aws_security_group.master-8001.id}"
-}
-
-resource "aws_security_group_rule" "master-8001-egress" {
-  type = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
-  cidr_blocks = [
-    "0.0.0.0/0"
-  ]
-  security_group_id = "${aws_security_group.master-8001.id}"
+  security_group_id = "${aws_security_group.master.id}"
 }
 
 resource "aws_security_group_rule" "master-8001-ngw" {
@@ -228,19 +173,8 @@ resource "aws_security_group_rule" "master-8001-ngw" {
     to_port     = 8001
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.master-8001.id}"
+    security_group_id = "${aws_security_group.master.id}"
     description = "allow icp to contact its kubernetes API over nat gateway"
-}
-
-resource "aws_security_group" "master-8001" {
-  name = "icp-master-8001-${random_id.clusterid.hex}"
-  description = "allow incoming to ICP kubernetes API"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-master-8001-${random_id.clusterid.hex}")
-  )}"
 }
 
 resource "aws_security_group_rule" "master-8500-ingress" {
@@ -252,7 +186,7 @@ resource "aws_security_group_rule" "master-8500-ingress" {
   cidr_blocks = [
     "${element(var.allowed_cidr_master_8500, count.index)}"
   ]
-  security_group_id = "${aws_security_group.master-8500.id}"
+  security_group_id = "${aws_security_group.master.id}"
 }
 
 resource "aws_security_group_rule" "master-8500-ngw" {
@@ -262,29 +196,41 @@ resource "aws_security_group_rule" "master-8500-ngw" {
     to_port     = 8500
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.master-8500.id}"
+    security_group_id = "${aws_security_group.master.id}"
     description = "allow icp to contact itself on registry endpoint over the nat gateway"
 }
 
-resource "aws_security_group_rule" "master-8500-egress" {
-  type = "egress"
-  from_port   = 0
-  to_port     = 0
-  protocol    = "-1"
+resource "aws_security_group_rule" "master-8600-ingress" {
+  count = "${length(var.allowed_cidr_master_8600)}"
+  type = "ingress"
+  from_port   = 8600
+  to_port     = 8600
+  protocol    = "tcp"
   cidr_blocks = [
-    "0.0.0.0/0"
+    "${element(var.allowed_cidr_master_8600, count.index)}"
   ]
-  security_group_id = "${aws_security_group.master-8500.id}"
+  security_group_id = "${aws_security_group.master.id}"
 }
 
-resource "aws_security_group" "master-8500" {
-  name = "icp-master-8500-${random_id.clusterid.hex}"
-  description = "allow incoming to icp private registry"
+resource "aws_security_group_rule" "master-8600-ngw" {
+    count = "${length(var.azs)}"
+    type = "ingress"
+    from_port   = 8600
+    to_port     = 8600
+    protocol    = "tcp"
+    cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
+    security_group_id = "${aws_security_group.master.id}"
+    description = "allow icp to contact itself on registry endpoint over the nat gateway"
+}
+
+resource "aws_security_group" "master" {
+  name = "icp-master-${random_id.clusterid.hex}"
+  description = "ICP ${random_id.clusterid.hex} master nodes"
   vpc_id = "${aws_vpc.icp_vpc.id}"
 
   tags = "${merge(
     var.default_tags,
-    map("Name", "icp-master-8500-${random_id.clusterid.hex}")
+    map("Name", "icp-master-${random_id.clusterid.hex}")
   )}"
 }
 
@@ -295,22 +241,22 @@ resource "aws_security_group_rule" "master-9443-ngw" {
     to_port     = 9443
     protocol    = "tcp"
     cidr_blocks = ["${element(aws_eip.icp_ngw_eip.*.public_ip, count.index)}/32"]
-    security_group_id = "${aws_security_group.master-9443.id}"
+    security_group_id = "${aws_security_group.master.id}"
     description = "allow icp to contact itself on oidc endpoint over the nat gateway"
 }
 
-resource "aws_security_group" "master-9443" {
-  name = "icp-master-9443-${random_id.clusterid.hex}"
-  description = "allow incoming to icp auth service"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-master-9443-${random_id.clusterid.hex}")
-  )}"
+resource "aws_security_group_rule" "master-egress" {
+  type = "egress"
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = [
+    "0.0.0.0/0"
+  ]
+  security_group_id = "${aws_security_group.master.id}"
 }
 
-
+/*
 resource "aws_security_group" "icp-registry-mount" {
   count = "${var.master["nodes"] > 1 ? 1 : 0 }"
   name = "icp_efs_registry_sg-${random_id.clusterid.hex}"
@@ -370,3 +316,4 @@ resource "aws_security_group" "icp-audit-mount" {
     map("Name", "icp-audit-mount-sg-${random_id.clusterid.hex}")
   )}"
 }
+*/

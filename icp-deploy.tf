@@ -50,7 +50,7 @@ resource "aws_s3_bucket_object" "icp_config_yaml" {
   key    = "icp-terraform-config.yaml"
   content = <<EOF
 kubelet_nodename: fqdn
-cloud_provider: aws
+${var.use_aws_cloudprovider ? "cloud_provider: aws" : "" }
 calico_tunnel_mtu: 8981
 ansible_user: icpdeploy
 ansible_become: true
@@ -60,7 +60,8 @@ default_admin_password: ${var.icppassword}
 proxy_lb_address: ${aws_lb.icp-proxy.dns_name}
 cluster_lb_address: ${aws_lb.icp-console.dns_name}
 cluster_CA_domain: ${var.user_provided_cert_dns != "" ? var.user_provided_cert_dns : aws_lb.icp-console.dns_name}
-disabled_management_services: [ "${var.va["nodes"] == 0 ? "va" : "" }" ]
+disabled_management_services: [ "istio", "custom-metrics-adapter", "${var.va["nodes"] == 0 ? "va" : "" }", "${var.va["nodes"] == 0 ? "vulnerability-advisor": ""}" ]
+kibana_install: true
 EOF
 #  source = "${path.module}/items-config.yaml"
 }

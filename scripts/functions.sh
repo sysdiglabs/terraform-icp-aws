@@ -4,7 +4,6 @@ DefaultRepo="icp-inception"
 
 # Populates globals $org $repo $tag
 function parse_icpversion() {
-
   # Determine if registry is also specified
   if [[ $1 =~ .*/.*/.* ]]
   then

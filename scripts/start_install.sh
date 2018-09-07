@@ -3,18 +3,24 @@
 source /tmp/icp_scripts/functions.sh
 
 ##### MAIN #####
-while getopts ":b:i:" arg; do
-    case "${arg}" in
-      b)
-        s3_config_bucket=${OPTARG}
-        ;;
-      i)
-        inception_image=${OPTARG}
-        ;;
-    esac
+while getopts ":s:c:i:r:" arg; do
+  case "${arg}" in
+    s)
+      s3_patch_scripts=${OPTARG}
+      ;;
+    c)
+      s3_config_bucket=${OPTARG}
+      ;;
+    i)
+      inception_image=${OPTARG}
+      ;;
+    r)
+      s3_registry_bucket=${OPTARG}
+      ;;
+  esac
 done
 
-export awscli=`which aws`
+awscli=/usr/local/bin/aws
 
 # Figure out the version
 # This will populate $org $repo and $tag
@@ -90,9 +96,7 @@ for key, value in config_o.iteritems():
       new_config[key] = False
     else:
       new_config[key] = value
-
     continue
-
   new_config[key] = value
 
 # Write the new configuration
@@ -107,7 +111,6 @@ myip=`ip route get 8.8.8.8 | awk 'NR==1 {print $NF}'`
 
 # wait for all hosts in the cluster to finish cloud-init
 docker run \
-  -e LICENSE=accept \
   -e ANSIBLE_HOST_KEY_CHECKING=false \
   -v /opt/ibm/cluster:/installer/cluster \
   --entrypoint ansible \
@@ -129,6 +132,29 @@ docker run \
   -v /opt/ibm/cluster:/installer/cluster \
   ${inception_image} \
   install
+
+# if additional post-install scripts specified, run the scripts through the installer now
+for script in ${s3_patch_scripts}; do
+  echo "Executing post-install patch script ${script} ..."
+  script_name=`basename ${script}`
+  ${awscli} s3 cp ${script} /opt/ibm/cluster/${script_name}
+  chmod +x /opt/ibm/cluster/${script_name}
+  docker run -e LICENSE=accept -t --net=host -v /opt/ibm/cluster:/installer/cluster ${inception_image} ./cluster/${script_name}
+  rm -f /opt/ibm/cluster/${script_name}
+done
+
+# patch the registry to use our S3 bucket
+region=`curl http://169.254.169.254/latest/dynamic/instance-identity/document | grep "region" | awk -F: '{print $2}' | sed -e 's/[ ",]//g'`
+sed -i '/filesystem/{$!{N;s/filesystem:\n\(.*\)rootdirectory.*/s3:\n\1bucket: '${s3_registry_bucket}'\n\1region: '${region}'/}}' /opt/ibm/cluster/cfc-components/registry-conf/registry-config.yaml
+kubectl="docker run --net=host -e KUBECONFIG=/tmp/kubeconfig.yaml -v /opt/ibm/cluster:/installer/cluster -v /tmp:/tmp --entrypoint /usr/local/bin/kubectl ${inception_image}"
+$kubectl config set-cluster local --server=https://localhost:8001 --insecure-skip-tls-verify=true
+$kubectl config set-credentials user --embed-certs=true --client-certificate=/installer/cluster/cfc-certs/kubecfg.crt --client-key=/installer/cluster/cfc-certs/kubecfg.key
+$kubectl config set-context ctx --cluster=local --user=user --namespace=kube-system
+$kubectl config use-context ctx
+$kubectl delete configmap registry-config
+$kubectl create configmap registry-config --from-file=/installer/cluster/cfc-components/registry-conf/registry-config.yaml
+$kubectl delete pods -l app=image-manager
+rm -f /tmp/kubeconfig.yaml
 
 # backup the config
 ${awscli} s3 sync /opt/ibm/cluster s3://${s3_config_bucket}
