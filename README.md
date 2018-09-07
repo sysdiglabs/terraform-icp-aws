@@ -48,6 +48,7 @@ In a single availability zone, we divide the network into a public subnet which 
 | `aws_region`   | no           | AWS region that the VPC will be created in.  By default, uses `us-east-2`.  Note that for an HA installation, the AWS selected region should have at least 3 availability zones. |
 | `azs`          | no           | AWS Availability Zones that the VPC will be created in, e.g. `[ "a", "b", "c"]` to install in three availability zones.  By default, uses `["a", "b", "c"]`.  Note that the AWS selected region should have at least 3 availability zones for high availability.  Setting to a single availability zone will disable high availability and not provision EFS, in this case, reduce the number of master and proxy nodes to 1. |
 | `key_name`     | yes          | AWS keypair name to assign to instances     |
+| `ami` | no | Base AMI to use for all EC2 instances.  If none provided, will search for latest version of RHEL 7.5 |
 | `docker_package_location` | no         | S3 URL of the ICP docker package for RHEL (e.g. `s3://<bucket>/<filename>`). Ubuntu will use `docker-ce` from the [Docker apt repository](https://docs.docker.com/install/linux/docker-ce/ubuntu/).  If Docker is already installed in the base AMI, this step will be skipped. |
 | `image_location` | no         | S3 URL of the ICP binary package (e.g. `s3://<bucket>/ibm-cloud-private-x86_64-2.1.0.3.tar.gz`).  Can also be a local path, e.g. `./icp-install/ibm-cloud-private-x86_64-2.1.0.3.tar.gz`; in this case the Terraform automation will create an S3 bucket and upload the binary package.  If provided, the automation will download the binaries from S3 and perform a `docker load` on every instance.  Note that it is faster to create an instance, install docker, perform the `docker load`, and convert to an AMI for use as a base instance for all node role types, as loading docker images takes around 20 minutes per EC2 instance. If the installer image is already on the EC2 instance, this step is skipped. |
 | `patch_images` | no         | A list of S3 URLs for the images to load to each ICP node before installation.  For example, for ICP 2.1.0.3 fixpack 1, this would be `[ "s3://<bucket>/icp-inception-amd64.2.1.0.3.fp1.tar" ]`.  If provided, the automation will download these additional binaries from S3 and perform a `docker load` on every EC2 instance in the ICP cluster. |
@@ -113,10 +114,10 @@ The Terraform automation creates the following objects.
 |-----------|-------|-----------------------|--------|-------------------|
 | Bastion   |   0   | t2.large              | public | icp-default, icp-bastion |
 | Master    |   3   |  m4.xlarge            | private | icp-default, icp-master |
-| Management |  3   | m4.xlarge             | private | icp-default, icp-management |
-| VA        | 3     | m4.xlarge             | private | icp-default, icp-va |
+| Management |  3   | m4.xlarge             | private | icp-default |
+| VA        | 3     | m4.xlarge             | private | icp-default |
 | Proxy     |   3   | m4.large              | private | icp-default, icp-proxy |
-| Worker    |  > 3   | m4.xlarge             | private | icp-default, icp-worker |
+| Worker    |  > 3   | m4.xlarge             | private | icp-default |
 
 *(the instance types, base AMIs and counts can be configured in `variables.tf`)*
 
@@ -169,6 +170,7 @@ Additionally, we add `S3FullAccess` policy so that the IAM role can get installa
 - VPC with an internet gateway   
 - All ICP nodes are placed in private subnets, each with their own NAT Gateway.
   - outbound Internet access from private subnet through NAT Gateway
+- Private EC2 and S3 API endpoints are created in the VPC
 
 #### Subnets
 - two for each AZ (one public, one private)
