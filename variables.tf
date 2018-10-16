@@ -75,9 +75,9 @@ variable "master" {
   type = "map"
   default = {
     nodes     = "3"
-    type      = "m4.xlarge"
+    type      = "m4.2xlarge"
     ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
-    disk      = "100" //GB
+    disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
   }
@@ -86,9 +86,9 @@ variable "proxy" {
   type = "map"
   default = {
     nodes     = "3"
-    type      = "m4.large"
+    type      = "m4.xlarge"
     ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
-    disk      = "100" //GB
+    disk      = "150" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
   }
@@ -98,9 +98,9 @@ variable "management" {
   type = "map"
   default = {
     nodes     = "3"
-    type      = "m4.xlarge"
+    type      = "m4.2xlarge"
     ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
-    disk      = "100" //GB
+    disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
   }
@@ -110,9 +110,9 @@ variable "worker" {
   type = "map"
   default = {
     nodes     = "3"
-    type      = "m4.xlarge"
+    type      = "m4.2xlarge"
     ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
-    disk      = "100" //GB
+    disk      = "150" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
   }
@@ -122,9 +122,9 @@ variable "va" {
   type = "map"
   default = {
     nodes     = "3"
-    type      = "m4.xlarge"
+    type      = "m4.2xlarge"
     ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
-    disk      = "100" //GB
+    disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
   }

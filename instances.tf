@@ -184,6 +184,13 @@ ${count.index == 0 && var.enable_autoscaling ? "
 - /tmp/icp_scripts/create_client_cert.sh -i ${var.icp_inception_image} -b ${aws_s3_bucket.icp_config_backup.id}"
   :
 "" }
+${var.master["nodes"] > 1 ? "
+mounts:
+  - ['${element(local.efs_registry_mountpoints, count.index)}:/', '/var/lib/registry', 'nfs4', 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2', '0', '0']
+  - ['${element(local.efs_audit_mountpoints, count.index)}:/', '/var/lib/icp/audit', 'nfs4', 'nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2', '0', '0']
+"
+:
+"" }
 users:
 - default
 - name: icpdeploy

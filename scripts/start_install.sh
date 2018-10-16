@@ -48,6 +48,10 @@ ${awscli} s3 cp s3://${s3_config_bucket}/cfc-certs /opt/ibm/cluster/cfc-certs
 ${awscli} s3 cp s3://${s3_config_bucket}/ssh_key /opt/ibm/cluster/ssh_key
 ${awscli} s3 cp s3://${s3_config_bucket}/icp-terraform-config.yaml /tmp/icp-terraform-config.yaml
 
+# HOTFIX for https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.0/troubleshoot/manifest_tool.html
+echo "Symlinking manifest-tool into /usr/bin"
+sudo ln -s /usr/local/bin/manifest-tool /usr/bin/manifest-tool
+
 # append the image repo
 if [ ! -z "${registry}${registry:+}" ]; then
   echo "image_repo: ${registry}${registry:+/}${org}" >> /tmp/icp-terraform-config.yaml
@@ -143,18 +147,19 @@ for script in ${s3_patch_scripts}; do
   rm -f /opt/ibm/cluster/${script_name}
 done
 
+# REVERTED BACK TO EBS-BASED REGISTRY SUPPORT IN ICP 3.1.0
 # patch the registry to use our S3 bucket
-region=`curl http://169.254.169.254/latest/dynamic/instance-identity/document | grep "region" | awk -F: '{print $2}' | sed -e 's/[ ",]//g'`
-sed -i '/filesystem/{$!{N;s/filesystem:\n\(.*\)rootdirectory.*/s3:\n\1bucket: '${s3_registry_bucket}'\n\1region: '${region}'/}}' /opt/ibm/cluster/cfc-components/registry-conf/registry-config.yaml
-kubectl="docker run --net=host -e KUBECONFIG=/tmp/kubeconfig.yaml -v /opt/ibm/cluster:/installer/cluster -v /tmp:/tmp --entrypoint /usr/local/bin/kubectl ${inception_image}"
-$kubectl config set-cluster local --server=https://localhost:8001 --insecure-skip-tls-verify=true
-$kubectl config set-credentials user --embed-certs=true --client-certificate=/installer/cluster/cfc-certs/kubecfg.crt --client-key=/installer/cluster/cfc-certs/kubecfg.key
-$kubectl config set-context ctx --cluster=local --user=user --namespace=kube-system
-$kubectl config use-context ctx
-$kubectl delete configmap registry-config
-$kubectl create configmap registry-config --from-file=/installer/cluster/cfc-components/registry-conf/registry-config.yaml
-$kubectl delete pods -l app=image-manager
-rm -f /tmp/kubeconfig.yaml
+#region=`curl http://169.254.169.254/latest/dynamic/instance-identity/document | grep "region" | awk -F: '{print $2}' | sed -e 's/[ ",]//g'`
+#sed -i '/filesystem/{$!{N;s/filesystem:\n\(.*\)rootdirectory.*/s3:\n\1bucket: '${s3_registry_bucket}'\n\1region: '${region}'/}}' /opt/ibm/cluster/cfc-components/registry-conf/registry-config.yaml
+#kubectl="docker run --net=host -e KUBECONFIG=/tmp/kubeconfig.yaml -v /opt/ibm/cluster:/installer/cluster -v /tmp:/tmp --entrypoint /usr/local/bin/kubectl ${inception_image}"
+#$kubectl config set-cluster local --server=https://localhost:8001 --insecure-skip-tls-verify=true
+#$kubectl config set-credentials user --embed-certs=true --client-certificate=/installer/cluster/cfc-certs/kubecfg.crt --client-key=/installer/cluster/cfc-certs/kubecfg.key
+#$kubectl config set-context ctx --cluster=local --user=user --namespace=kube-system
+#$kubectl config use-context ctx
+#$kubectl delete configmap registry-config
+#$kubectl create configmap registry-config --from-file=/installer/cluster/cfc-components/registry-conf/registry-config.yaml
+#$kubectl delete pods -l app=image-manager
+#rm -f /tmp/kubeconfig.yaml
 
 # backup the config
 ${awscli} s3 sync /opt/ibm/cluster s3://${s3_config_bucket}
