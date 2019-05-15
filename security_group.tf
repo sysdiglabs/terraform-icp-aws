@@ -1,32 +1,16 @@
-/* Default security group */
-resource "aws_security_group" "default" {
-  name = "icp_default_sg-${random_id.clusterid.hex}"
-  description = "Default security group that allows inbound and outbound traffic from all instances in the VPC"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
-
-  ingress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["${aws_vpc.icp_vpc.cidr_block}"]
-    self        = true
-  }
-
-  egress {
-    from_port   = "0"
-    to_port     = "0"
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-    self        = true
-  }
-
-  tags = "${merge(
-    var.default_tags,
-    map("Name", "icp-default-sg-${random_id.clusterid.hex}"),
-    map("kubernetes.io/cluster/${random_id.clusterid.hex}", "${random_id.clusterid.hex}")
-  )}"
+#
+# Extract the data from the existing VPC.
+#
+data "aws_vpc" "icp_vpc" {
+  id = "${var.existing_vpc_id}"
 }
 
+/* Default security group */
+data "aws_security_group" "default" {
+  id = "${var.existing_default_security_group_id}"
+}
+
+/*
 resource "aws_security_group_rule" "bastion-22-ingress" {
   count = "${var.bastion["nodes"] > 0 ? length(var.allowed_cidr_bastion_22) : 0}"
   type = "ingress"
@@ -55,7 +39,7 @@ resource "aws_security_group" "bastion" {
   count = "${var.bastion["nodes"] > 0 ? 1 : 0}"
   name = "icp-bastion-${random_id.clusterid.hex}"
   description = "allow SSH"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${var.existing_vpc_id}"
 
   tags = "${merge(
     var.default_tags,
@@ -89,7 +73,7 @@ resource "aws_security_group_rule" "proxy-80-ingress" {
 resource "aws_security_group" "proxy" {
   name = "icp-proxy-${random_id.clusterid.hex}"
   description = "ICP ${random_id.clusterid.hex} proxy nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${var.existing_vpc_id}"
 
   tags = "${merge(
     var.default_tags,
@@ -226,7 +210,7 @@ resource "aws_security_group_rule" "master-8600-ngw" {
 resource "aws_security_group" "master" {
   name = "icp-master-${random_id.clusterid.hex}"
   description = "ICP ${random_id.clusterid.hex} master nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${var.existing_vpc_id}"
 
   tags = "${merge(
     var.default_tags,
@@ -261,7 +245,7 @@ resource "aws_security_group" "icp-registry-mount" {
   count = "${var.master["nodes"] > 1 ? 1 : 0 }"
   name = "icp_efs_registry_sg-${random_id.clusterid.hex}"
   description = "allow incoming to EFS from master nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${var.existing_vpc_id}"
 
   ingress {
     from_port   = 0
@@ -289,7 +273,7 @@ resource "aws_security_group" "icp-audit-mount" {
   count = "${var.master["nodes"] > 1 ? 1 : 0 }"
   name = "icp_efs_audit_sg-${random_id.clusterid.hex}"
   description = "allow incoming to EFS from master nodes"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${var.existing_vpc_id}"
 
   ingress {
     from_port   = 0
@@ -316,4 +300,4 @@ resource "aws_security_group" "icp-audit-mount" {
     map("Name", "icp-audit-mount-sg-${random_id.clusterid.hex}")
   )}"
 }
-
+*/

@@ -4,11 +4,36 @@ variable "aws_region" {
   description = "One of us-east-2, us-east-1, us-west-1, us-west-2, ap-south-1, ap-northeast-2, ap-southeast-1, ap-southeast-2, ap-northeast-1, us-west-2, eu-central-1, eu-west-1, eu-west-2, sa-east-1"
 }
 
+# jumpbx access
+variable "jumpbox" {
+  default = "jmp.aws.yoox.net"
+}
+
+variable "jumpbox_user" {
+  default = "X
+}
+
+variable "jumpbox_password" {
+  default = ""
+}
+
+variable "jumpbox_key" {
+  default = ""
+}
+
 variable "azs" {
   type  = "list"
   description = "The availability zone letter appendix you want to deploy to in the selected region "
   default = ["a", "b", "c"]
 }
+
+variable "existing_vpc_id" {}
+variable "existing_subnet_id" {
+  type = "list"
+}
+
+variable "existing_default_security_group_id" {}
+#variable "existing_kms_key_id" {}
 
 ####### AWS Deployment Details ####################################
 # SSH Key
@@ -54,7 +79,8 @@ variable "pub_subnet_cidrs" {
   default     = ["10.10.20.0/24", "10.10.21.0/24", "10.10.22.0/24" ]
 }
 
-variable "ec2_iam_role_name" { default = "icp-ec2-iam" }
+variable "ec2_iam_master_role_name" { default = "icp-ec2-iam-master" }
+variable "ec2_iam_node_role_name" { default = "icp-ec2-iam-node" }
 variable "private_domain" { default = "icp-cluster.icp" }
 
 variable "ami" { default = "" }
@@ -131,7 +157,9 @@ variable "va" {
 }
 
 variable "instance_name" { default = "icp" }
-variable "icppassword" { default = "MySecretP4ssw0RD" }
+variable "icppassword" {
+   default = "" 
+}
 
 variable "docker_package_location" {
   description = "When installing ICP EE on RedHat. Prefix location string with http: or nfs: to indicate protocol "
@@ -141,6 +169,18 @@ variable "docker_package_location" {
 variable "image_location" {
   description = "Image location when installing EnterPrise edition. prefix location string with http: or nfs: to indicate protocol"
   default     = ""
+}
+
+variable "registry_server" {
+  default   = ""
+}
+
+variable "registry_username" {
+  default   = ""
+}
+
+variable "registry_password" {
+  default   = ""
 }
 
 variable "patch_images" {
@@ -157,7 +197,7 @@ variable "patch_scripts" {
 
 variable "icp_inception_image" {
   description = "icp-inception bootstrap image repository"
-  default     = "ibmcom/icp-inception:2.1.0.2-ee"
+  default     = "ibmcom/icp-inception-amd64:3.1.2-ee"
 }
 
 variable "icp_config_yaml" {
@@ -177,8 +217,13 @@ variable "postinstallbackup" {
   default     = "true"
 }
 
-variable "existing_ec2_iam_instance_profile_name" {
-  description = "Existing IAM instance profile name to apply to EC2 instances"
+variable "existing_ec2_iam_master_instance_profile_name" {
+  description = "Existing IAM instance profile name to apply to master EC2 instances"
+  default     = ""
+}
+
+variable "existing_ec2_iam_node_instance_profile_name" {
+  description = "Existing IAM instance profile name to apply to node EC2 instances"
   default     = ""
 }
 
@@ -247,4 +292,10 @@ variable "allowed_cidr_bastion_22" {
 
 variable "use_aws_cloudprovider" {
   default = "true"
+}
+
+variable "disabled_management_services" {
+  description = "List of management services to disable"
+  type        = "list"
+  default     = ["istio", "vulnerability-advisor", "storage-glusterfs", "storage-minio"]
 }

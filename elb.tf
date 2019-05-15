@@ -7,7 +7,7 @@ resource "aws_lb_target_group" "icp-console-8443" {
   port = 8443
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group" "icp-console-9443" {
@@ -15,7 +15,7 @@ resource "aws_lb_target_group" "icp-console-9443" {
   port = 9443
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group" "icp-kubernetes-api-8001" {
@@ -23,7 +23,7 @@ resource "aws_lb_target_group" "icp-kubernetes-api-8001" {
   port = 8001
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group" "icp-registry-8500" {
@@ -31,7 +31,7 @@ resource "aws_lb_target_group" "icp-registry-8500" {
   port = 8500
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group" "icp-registry-8600" {
@@ -39,7 +39,7 @@ resource "aws_lb_target_group" "icp-registry-8600" {
   port = 8600
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_listener" "icp-console-8443" {
@@ -134,17 +134,17 @@ resource "aws_lb_target_group_attachment" "master-8600" {
 
 resource "aws_lb" "icp-console" {
   depends_on = [
-    "aws_internet_gateway.icp_gw"
+    #"aws_internet_gateway.icp_gw"
   ]
 
   name = "icp-${random_id.clusterid.hex}-console"
   load_balancer_type = "network"
-#  internal = "true"
+  internal = "true"
 
   tags = "${var.default_tags}"
 
   # The same availability zone as our instance
-  subnets = [ "${aws_subnet.icp_public_subnet.*.id}" ]
+  subnets = [ "${data.aws_subnet.icp_private_subnet.*.id}" ]
 }
 
 resource "aws_lb_target_group" "icp-proxy-443" {
@@ -152,7 +152,7 @@ resource "aws_lb_target_group" "icp-proxy-443" {
   port = 443
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group" "icp-proxy-80" {
@@ -160,7 +160,7 @@ resource "aws_lb_target_group" "icp-proxy-80" {
   port = 80
   protocol = "TCP"
   tags = "${var.default_tags}"
-  vpc_id = "${aws_vpc.icp_vpc.id}"
+  vpc_id = "${data.aws_vpc.icp_vpc.id}"
 }
 
 resource "aws_lb_target_group_attachment" "icp-proxy-443" {
@@ -201,14 +201,14 @@ resource "aws_lb_listener" "icp-proxy-80" {
 
 resource "aws_lb" "icp-proxy" {
   depends_on = [
-    "aws_internet_gateway.icp_gw"
+    #"aws_internet_gateway.icp_gw"
   ]
 
   name = "icp-${random_id.clusterid.hex}-proxy"
   load_balancer_type = "network"
 
   # The same availability zone as our instance
-  subnets = [ "${aws_subnet.icp_public_subnet.*.id}" ]
+  subnets = [ "${data.aws_subnet.icp_private_subnet.*.id}" ]
 
   tags = "${var.default_tags}"
 }
