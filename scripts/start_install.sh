@@ -64,7 +64,7 @@ if [[ ! -z "${image_location}" ]]; then
   if [[ "${image_location:0:2}" == "s3" ]]; then
     # stream it right out of s3 into docker
     logmsg "Copying binary package from ${image_location} ..."
-    ${awscli} s3 cp ${image_location} /tmp 
+    ${awscli} s3 cp ${image_location} /tmp
 
     logmsg "Loading docker images from /tmp/`basename ${image_location}` ..."
     tar zxf /tmp/`basename ${image_location}` -O | docker load | tee -a $logfile
@@ -85,11 +85,11 @@ if [ ! -d /tmp/icp-deploy ]; then
   mkdir -p /tmp/icp-deploy
 fi
 
-docker pull hashicorp/terraform:light
+docker pull hashicorp/terraform:0.11.14
 
 cd /tmp/icp-deploy
-docker run -v `pwd`:/deploy -w=/deploy --entrypoint=git hashicorp/terraform:light clone https://github.com/ibm-cloud-architecture/terraform-module-icp-deploy.git
-docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy --entrypoint=git hashicorp/terraform:light checkout 3.1.1
+docker run -v `pwd`:/deploy -w=/deploy --entrypoint=git hashicorp/terraform:0.11.14 clone https://github.com/ibm-cloud-architecture/terraform-module-icp-deploy.git
+docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy --entrypoint=git hashicorp/terraform:0.11.14 checkout 3.1.1
 
 # write the terraform.tfvars
 ${awscli} s3 cp s3://${s3_config_bucket}/terraform.tfvars terraform-module-icp-deploy/terraform.tfvars
@@ -97,8 +97,8 @@ ${awscli} s3 cp s3://${s3_config_bucket}/terraform.tfvars terraform-module-icp-d
 # write the additional icp config file for merging
 ${awscli} s3 cp s3://${s3_config_bucket}/icp-terraform-config.yaml terraform-module-icp-deploy/icp-terraform-config.yaml
 
-docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:light init
-docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:light apply -auto-approve
+docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:0.11.14 init
+docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:0.11.14 apply -auto-approve
 
 # backup the config
 logmsg "Backing up the config to the S3 bucket."
