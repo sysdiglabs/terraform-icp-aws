@@ -23,3 +23,9 @@ jobs:
       - run:
           name: Plan
           command: terraform plan
+      - run:
+          name: Validate file
+          command: ls
+      - run:
+          name: content
+          command: cat backend_override.tf
