@@ -2,9 +2,12 @@ version: 2
 jobs:
   build:
     docker:
-      - image: debian:stretch
+      - image: hashicorp/terraform:0.11.14
     steps:
       - checkout
+      - run:
+          name: Terraform init
+          command: terraform init
       - run:
           name: Touch me
           command: touch thesunalwaysshineon.tv
@@ -20,3 +23,6 @@ jobs:
       - run:
           name: Triggertest
           command: echo trigger me
+      - run:
+          name: Plan
+          command: terraform plan
