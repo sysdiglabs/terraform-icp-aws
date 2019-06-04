@@ -22,10 +22,12 @@ jobs:
           command: terraform init
       - run:
           name: Plan
-          command: terraform plan
+          command: terraform plan -out=mydeployment
       - run:
-          name: Validate file
-          command: ls
-      - run:
-          name: content
-          command: cat backend_override.tf
+          name: Deploy and destroy
+          command: |
+            set +e
+            terraform apply mydeployment
+            aplyval=$?
+            terraform destroy -force
+            return ${aplyval}
