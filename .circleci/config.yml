@@ -6,23 +6,20 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Make backend
+          command: |
+            cat <<EOF > backend_override.tf
+              terraform {
+                  backend "s3" {
+                    bucket = "${tfstatebucket}"
+                    key    = "circledeployments/${CIRCLE_BUILD_NUM}"
+                    region = "${tfstateregion}"
+                  }
+                }
+            EOF
+      - run:
           name: Terraform init
           command: terraform init
-      - run:
-          name: Touch me
-          command: touch thesunalwaysshineon.tv
-      - run:
-          name: Greeting
-          command: echo Hello, world.
-      - run:
-          name: Print the Current Time
-          command: date
-      - run:
-          name: Show me
-          command: ls -lah
-      - run:
-          name: Triggertest
-          command: echo trigger me
       - run:
           name: Plan
           command: terraform plan
