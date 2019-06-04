@@ -22,7 +22,7 @@ jobs:
           command: terraform init
       - run:
           name: Plan
-          command: terraform plan -out=mydeployment
+          command: terraform plan -var-file=terraform-icp-ce-example.tfvars -out=mydeployment
       - run:
           name: Deploy and destroy
           command: |
