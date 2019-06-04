@@ -99,9 +99,12 @@ ${awscli} s3 cp s3://${s3_config_bucket}/icp-terraform-config.yaml terraform-mod
 
 docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:0.11.14 init
 docker run -v `pwd`:/deploy -w=/deploy/terraform-module-icp-deploy hashicorp/terraform:0.11.14 apply -auto-approve
+instretval=$?
 
 # backup the config
 logmsg "Backing up the config to the S3 bucket."
 ${awscli} s3 sync /opt/ibm/cluster s3://${s3_config_bucket}
 
 logmsg "~~~~~~~~ Completed ICP installation Code ~~~~~~~~"
+# Ensure the script exits with the exit code of the ICP installer
+exit ${instretval}
