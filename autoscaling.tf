@@ -27,7 +27,7 @@ module "icpautoscaling" {
 
     aws_region            = "${var.aws_region}"
     azs                   = ["${var.azs}"]
-    ami                   = "${var.worker["ami"] != "" ? var.worker["ami"] : local.default_ami }"
+    ami                   = "${var.worker["ami"] != "" ? var.worker["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
     worker_root_disk_size = "${var.worker["disk"]}"
     worker_docker_vol_size = "${var.worker["docker_vol"]}"
     key_name              = "${var.key_name}"
