@@ -17,3 +17,6 @@ jobs:
       - run:
           name: Show me
           command: ls -lah
+      - run:
+          name: Triggertest
+          command: echo trigger me
