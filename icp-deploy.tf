@@ -98,7 +98,7 @@ icp_configuration = {
   cluster_lb_address              = "${aws_lb.icp-console.dns_name}"
   cluster_CA_domain               = "${var.user_provided_cert_dns != "" ? var.user_provided_cert_dns : aws_lb.icp-console.dns_name}"
   cluster_name                    = "${var.instance_name}-${random_id.clusterid.hex}-cluster"
-  calico_ip_autodetection_method  = "interface=eth0"
+  calico_ip_autodetection_method  = "can-reach=${element(aws_network_interface.mastervip.*.private_ip, 0)}"
   kubelet_nodename                = "fqdn"
 ${var.use_aws_cloudprovider ? "
   cloud_provider                  = \"aws\"" : "" }
@@ -149,7 +149,7 @@ resource "null_resource" "start_install" {
   }
 
   count = "${var.bastion["nodes"] != 0 ? 1 : 0}"
-  
+
   provisioner "remote-exec" {
     connection {
       host          = "${aws_instance.icpmaster.0.private_ip}"

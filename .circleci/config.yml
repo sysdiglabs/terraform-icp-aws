@@ -1,0 +1,33 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: hashicorp/terraform:0.11.14
+    steps:
+      - checkout
+      - run:
+          name: Make backend
+          command: |
+            cat <<EOF > backend_override.tf
+              terraform {
+                  backend "s3" {
+                    bucket = "${tfstatebucket}"
+                    key    = "circledeployments/${CIRCLE_BUILD_NUM}"
+                    region = "${tfstateregion}"
+                  }
+                }
+            EOF
+      - run:
+          name: Terraform init
+          command: terraform init
+      - run:
+          name: Plan
+          command: terraform plan -var-file=terraform-icp-ce-example.tfvars -out=mydeployment
+      - run:
+          name: Deploy and destroy
+          command: |
+            set +e
+            terraform apply mydeployment
+            aplyval=$?
+            terraform destroy -force
+            return ${aplyval}

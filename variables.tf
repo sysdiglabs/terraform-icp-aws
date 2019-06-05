@@ -58,7 +58,7 @@ variable "ec2_iam_master_role_name" { default = "icp-ec2-iam-master" }
 variable "ec2_iam_node_role_name" { default = "icp-ec2-iam-node" }
 variable "private_domain" { default = "icp-cluster.icp" }
 
-variable "ami" { default = "" }
+variable "ami" { default = "ubuntu" }
 
 # EC2 instances
 # no bastion host by default.  set to 1 if you want to debug
@@ -67,7 +67,7 @@ variable "bastion" {
   default = {
     nodes     = "0"
     type      = "t2.micro"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "10" //GB
   }
 }
@@ -77,7 +77,7 @@ variable "master" {
   default = {
     nodes     = "3"
     type      = "m4.2xlarge"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
@@ -88,7 +88,7 @@ variable "proxy" {
   default = {
     nodes     = "3"
     type      = "m4.xlarge"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "150" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
@@ -100,7 +100,7 @@ variable "management" {
   default = {
     nodes     = "3"
     type      = "m4.2xlarge"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
@@ -112,7 +112,7 @@ variable "worker" {
   default = {
     nodes     = "3"
     type      = "m4.2xlarge"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "150" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
@@ -124,7 +124,7 @@ variable "va" {
   default = {
     nodes     = "3"
     type      = "m4.2xlarge"
-    ami       = "" // Leave blank to let terraform search for Ubuntu 16.04 ami. NOT RECOMMENDED FOR PRODUCTION
+    ami       = "" // Insert your own ami. Leave blank to use main var.ami
     disk      = "300" //GB
     docker_vol = "100" // GB
     ebs_optimized = true    // not all instance types support EBS optimized
@@ -133,7 +133,7 @@ variable "va" {
 
 variable "instance_name" { default = "icp" }
 variable "icppassword" {
-   default = "" 
+   default = ""
 }
 
 variable "docker_package_location" {

@@ -20,7 +20,10 @@ locals  {
     var.docker_package_location :
       var.docker_package_location == "" ? "" : "s3://${element(concat(aws_s3_bucket.icp_binaries.*.id, list("")), 0)}/icp-docker.bin"}"
   lambda_s3_bucket = "${element(concat(aws_s3_bucket.icp_lambda.*.id, list("")), 0)}"
-  default_ami = "${var.ami != "" ? var.ami : data.aws_ami.rhel.id}"
+  default_searched_ami = {
+    "ubuntu"  = "${data.aws_ami.ubuntu.id}"
+    "rhel"    = "${data.aws_ami.rhel.id}"
+  }
 }
 
 ## Search for a default Ubuntu image to allow this option
@@ -84,7 +87,7 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "bastion" {
   count         = "${var.bastion["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.bastion["ami"] != "" ? var.bastion["ami"] : local.default_ami }"
+  ami           = "${var.bastion["ami"] != "" ? var.bastion["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.bastion["type"]}"
   subnet_id     = "${element(aws_subnet.icp_public_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
@@ -136,7 +139,7 @@ resource "aws_instance" "icpmaster" {
 
   count         = "${var.master["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.master["ami"] != "" ? var.master["ami"] : local.default_ami }"
+  ami           = "${var.master["ami"] != "" ? var.master["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.master["type"]}"
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -181,7 +184,7 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap-node.sh"))}
 runcmd:
 - /tmp/bootstrap-node.sh -c ${aws_s3_bucket.icp_config_backup.id} -s "bootstrap.sh functions.sh ${count.index == 0 ? "start_install.sh" : ""} ${count.index == 0 && var.enable_autoscaling ? "create_client_cert.sh" : ""}"
-- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx 
+- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx
 ${var.bastion["nodes"] == 0 && count.index == 0 ? "
 - /tmp/icp_scripts/start_install.sh -i ${local.icp-version} -b ${aws_s3_bucket.icp_config_backup.id} ${local.image_package_uri != "" ? "-c ${local.image_package_uri}" : "" }"
   :
@@ -223,7 +226,7 @@ resource "aws_instance" "icpproxy" {
 
   count         = "${var.proxy["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.proxy["ami"] != "" ? var.proxy["ami"] : local.default_ami }"
+  ami           = "${var.proxy["ami"] != "" ? var.proxy["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.proxy["type"]}"
 
   availability_zone = "${format("%s%s", element(list(var.aws_region), count.index), element(var.azs, count.index))}"
@@ -268,7 +271,7 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap-node.sh"))}
 runcmd:
 - /tmp/bootstrap-node.sh -c ${aws_s3_bucket.icp_config_backup.id} -s "bootstrap.sh"
-- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx 
+- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx
 users:
 - default
 - name: icpdeploy
@@ -295,7 +298,7 @@ resource "aws_instance" "icpmanagement" {
 
   count         = "${var.management["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.management["ami"] != "" ? var.management["ami"] : local.default_ami }"
+  ami           = "${var.management["ami"] != "" ? var.management["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.management["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
@@ -338,7 +341,7 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap-node.sh"))}
 runcmd:
 - /tmp/bootstrap-node.sh -c ${aws_s3_bucket.icp_config_backup.id} -s "bootstrap.sh"
-- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx 
+- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx
 users:
 - default
 - name: icpdeploy
@@ -365,7 +368,7 @@ resource "aws_instance" "icpva" {
 
   count         = "${var.va["nodes"]}"
   key_name      = "${var.key_name}"
-  ami           = "${var.va["ami"] != "" ? var.va["ami"] : local.default_ami }"
+  ami           = "${var.va["ami"] != "" ? var.va["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.va["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
@@ -408,7 +411,7 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap-node.sh"))}
 runcmd:
 - /tmp/bootstrap-node.sh -c ${aws_s3_bucket.icp_config_backup.id} -s "bootstrap.sh"
-- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx 
+- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx
 users:
 - default
 - name: icpdeploy
@@ -438,7 +441,7 @@ resource "aws_instance" "icpnodes" {
   ]
 
   key_name      = "${var.key_name}"
-  ami           = "${var.worker["ami"] != "" ? var.worker["ami"] : local.default_ami }"
+  ami           = "${var.worker["ami"] != "" ? var.worker["ami"] : lookup(local.default_searched_ami, var.ami, var.ami)}"
   instance_type = "${var.worker["type"]}"
   subnet_id     = "${element(aws_subnet.icp_private_subnet.*.id, count.index)}"
   vpc_security_group_ids = [
@@ -481,7 +484,7 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap-node.sh"))}
 runcmd:
 - /tmp/bootstrap-node.sh -c ${aws_s3_bucket.icp_config_backup.id} -s "bootstrap.sh"
-- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx 
+- /tmp/icp_scripts/bootstrap.sh ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/xvdx
 users:
 - default
 - name: icpdeploy

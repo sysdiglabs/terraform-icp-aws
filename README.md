@@ -33,7 +33,7 @@ In a single availability zone, we divide the network into a public subnet which 
    brew install terraform
    ```
 
-1. Create an S3 bucket in the same region that the ICP cluster will be created and upload the ICP binaries.  Make note of the bucket name.  You can use the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/awscli-install-bundle.html) to do this.  
+1. Create an S3 bucket in the same region that the ICP cluster will be created and upload the ICP binaries.  Make note of the bucket name.  You can use the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/awscli-install-bundle.html) to do this.
 
   For ICP 3.1.2-EE, you will need to copy the following:
   - the ICP binary package tarball (`ibm-cloud-private-x86_64-3.1.2.tar`)
@@ -46,7 +46,7 @@ In a single availability zone, we divide the network into a public subnet which 
 | `aws_region`   | no           | AWS region that the VPC will be created in.  By default, uses `us-east-2`.  Note that for an HA installation, the AWS selected region should have at least 3 availability zones. |
 | `azs`          | no           | AWS Availability Zones that the VPC will be created in, e.g. `[ "a", "b", "c"]` to install in three availability zones.  By default, uses `["a", "b", "c"]`.  Note that the AWS selected region should have at least 3 availability zones for high availability.  Setting to a single availability zone will disable high availability and not provision EFS, in this case, reduce the number of master and proxy nodes to 1. |
 | `key_name`     | yes          | AWS keypair name to assign to instances     |
-| `ami` | no | Base AMI to use for all EC2 instances.  If none provided, will search for latest version of RHEL 7.5 |
+| `ami` | no | Base AMI to use for all EC2 instances. For PoC and tests you can insert `ubuntu` or `rhel` and latest version of RHEL 7.5 or Ubuntu 16.04 will be searched |
 | `docker_package_location` | no         | S3 URL of the ICP docker package for RHEL (e.g. `s3://<bucket>/<filename>`). Ubuntu will use `docker-ce` from the [Docker apt repository](https://docs.docker.com/install/linux/docker-ce/ubuntu/).  If Docker is already installed in the base AMI, this step will be skipped. |
 | `image_location` | no         | S3 URL of the ICP binary package (e.g. `s3://<bucket>/ibm-cloud-private-x86_64-2.1.0.3.tar.gz`).  Can also be a local path, e.g. `./icp-install/ibm-cloud-private-x86_64-2.1.0.3.tar.gz`; in this case the Terraform automation will create an S3 bucket and upload the binary package.  If provided, the automation will download the binaries from S3 and perform a `docker load` on every instance.  Note that it is faster to create an instance, install docker, perform the `docker load`, and convert to an AMI for use as a base instance for all node role types, as loading docker images takes around 20 minutes per EC2 instance. If the installer image is already on the EC2 instance, this step is skipped. |
 | `icp_inception_image` | no | Name of the bootstrap installation image.  By default it uses `ibmcom/icp-inception-amd64:3.1.2-ee` to indicate 3.1.2 EE, but this will vary in each release.  You can also install ICP Community edition by specifying `ibmcom/icp-inception-amd64:3.1.2` for example, |
@@ -92,13 +92,13 @@ The following diagram illustrates the process:
 
 ![terraform install](imgs/terraform_icp_install.png)
 
-1. Terraform creates the infrastructure objects including EC2 instances.  
-2. The scripts in the `scripts` directory will be uploaded to an S3 bucket 
-3. The EC2 instances are configured with [cloud-init](https://cloud-init.io/) to retrieve the scripts from the S3 bucket on startup.  The `bootstrap.sh` script is executed silently on every node and bootstraps each node (install docker, prepare storage, etc).  
+1. Terraform creates the infrastructure objects including EC2 instances.
+2. The scripts in the `scripts` directory will be uploaded to an S3 bucket
+3. The EC2 instances are configured with [cloud-init](https://cloud-init.io/) to retrieve the scripts from the S3 bucket on startup.  The `bootstrap.sh` script is executed silently on every node and bootstraps each node (install docker, prepare storage, etc).
 4. A configuration file (`terraform.tfvars`) is generated from the outputs of the infrastructure for the [terraform-module-icp-deploy](https://github.com/ibm-cloud-architecture/terraform-module-icp-deploy) module and copied to the S3 bucket.
-5. The `start_install.sh` script is run on the first ICP master host, which clones the github module, downloads the `terraform.tfvars` file from the S3 bucket, and runs `terraform apply` in a docker container that triggers the rest of the ICP installation.  
+5. The `start_install.sh` script is run on the first ICP master host, which clones the github module, downloads the `terraform.tfvars` file from the S3 bucket, and runs `terraform apply` in a docker container that triggers the rest of the ICP installation.
 
-If no bastion host is provisioned, the installation runs silently on the boot master (i.e. `icp-master01`) using [cloud-init](https://cloud-init.io/) until it completes; otherwise the installation will continue synchronously using the bastion host's public IP (by setting the number of bastion nodes in `terraform.tfvars` to 1).  
+If no bastion host is provisioned, the installation runs silently on the boot master (i.e. `icp-master01`) using [cloud-init](https://cloud-init.io/) until it completes; otherwise the installation will continue synchronously using the bastion host's public IP (by setting the number of bastion nodes in `terraform.tfvars` to 1).
 
 ```
 bastion = {
@@ -144,7 +144,7 @@ An IAM role is created in AWS and attached to each EC2 instance.  See [AWS Cloud
 Additionally, we add `S3FullAccess` policy so that the IAM role can get installation images out of an S3 bucket and back up the `/opt/ibm/cluster` directory to an S3 bucket after installation.
 
 #### VPC
-- VPC with an internet gateway   
+- VPC with an internet gateway
 - All ICP nodes are placed in private subnets, each with their own NAT Gateway.
   - outbound Internet access from private subnet through NAT Gateway
 - Private EC2 and S3 API endpoints are created in the VPC
@@ -157,7 +157,7 @@ Additionally, we add `S3FullAccess` policy so that the IAM role can get installa
 #### Security Group
 Note that the below are the defaults, and each security group can have its whitelist be configured in `terraform.tfvars`.
 - `icp-bastion`
-  - allow 22 from 0.0.0.0/0   
+  - allow 22 from 0.0.0.0/0
 - `icp-default`
   - allow ALL traffic from itself *(all nodes are in this security group)*
   - *(this is tagged with the cluster id for Kubernetes ELB integration)*
@@ -165,11 +165,11 @@ Note that the below are the defaults, and each security group can have its white
   - allow from 0.0.0.0/0 on port 80
   - allow from 0.0.0.0/0 on port 443
 - `icp-master`
-  - allow from 0.0.0.0/0 on port 8500 (image registry)   
-  - allow from 0.0.0.0/0 on port 8600 (image registry)   
-  - allow from 0.0.0.0/0 on port 8001 (kube api)   
-  - allow from 0.0.0.0/0 on port 8443 (master UI)   
-  - allow from internal  on port 9443 (Auth service)   
+  - allow from 0.0.0.0/0 on port 8500 (image registry)
+  - allow from 0.0.0.0/0 on port 8600 (image registry)
+  - allow from 0.0.0.0/0 on port 8001 (kube api)
+  - allow from 0.0.0.0/0 on port 8443 (master UI)
+  - allow from internal  on port 9443 (Auth service)
 
 #### Load Balancer
 
@@ -224,7 +224,7 @@ The Terraform automation generates `cluster_CA_domain`, `cluster_lb_address`, an
 
 Note the other parameters in the `icp-deploy.tf` module.  The config files are stored in `/opt/ibm/cluster/config.yaml` on the boot-master.
 
-### Installing IBM Cloud Private Community Edition 
+### Installing IBM Cloud Private Community Edition
 
 The following parameters are required settings to install IBM Cloud Private Community Edition.  These values are the preferred values for any conflicting paramters in the `terraform.tfvars` file, as specified above in the [Prerequisites](#prerequisites) section.  These settings have been validated on IBM Cloud Private 3.1.0 Community Edition.
 
