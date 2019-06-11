@@ -3,7 +3,8 @@
 
 image_location = ""
 
-ami = "ubuntu"         # Use Ubuntu to simplify Docker installation on simple PoC
+ami = "rhel"         # Use RHEL and supply docker package
+docker_package_location = "s3://icp-docker-binaries/icp-docker-18.03.1_x86_64.bin"
 
 icp_inception_image = "ibmcom/icp-inception:3.2.0"
 
