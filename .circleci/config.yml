@@ -1,3 +1,9 @@
+# To successfully complete end-to-end tests including deployment
+# some variables need to be defined in the CircleCI environment
+#
+# AWS_ACCESS_KEY_ID       - Access key to provision resources
+# AWS_SECRET_ACCESS_KEY   - Access key secret to provision resources
+# TF_VAR_key_name         - An ssh key name that exists in the account that is being provisioned to
 version: 2.1
 commands:
   # CircleCI generally only triggers builds on commits to the main repository,
@@ -17,6 +23,33 @@ commands:
               echo "Will not deploy PRs, so marking this step successful"
               circleci step halt
             fi
+
+  early_return_for_unchanged_templates:
+    description: >-
+      Only build templates that has been modified. This ensures that documentation changes,
+      and changes to other template directories do not trigger a full system rebuild, which
+      can take hours, just to get the result of the affected changes.
+    parameters:
+      tfvarsfile:
+        type: string
+        default: notspecified
+    steps:
+      - run:
+          name: Early return if neither template files nor << parameters.tfvarsfile >> affected by changes
+          command: |
+            set +eo pipefail
+            # Changes to .tf should trigger build for all .tfvars, changes in .tfvar should only trigger that run
+            changeset=$(git diff --name-only origin/master)
+            relevant_changes=$(echo "$changeset" | grep -E "<< parameters.templatedir >>/(.*.tf)|(<< parameters.tfvarsfile >>)")
+            if [[ -n "${relevant_changes}" ]]; then
+              echo "Found relevant changes in changeset"
+              echo "${relevant_changes}"
+              echo "Will perform full build"
+            else
+              echo "Will not deploy commits not affecting this configuration"
+              echo "${changeset}"
+              circleci step halt
+            fi
 jobs:
   build:
     docker:
@@ -33,6 +66,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: terraform syntax validation
+          command: terraform validate -check-variables=false
+      - early_return_for_forked_pull_requests
+      - early_return_for_unchanged_templates:
+          tfvarsfile: << parameters.tfvarsfile >>
+      - run:
           name: Make backend for << parameters.tfvarsfile >>
           command: |
             cat \<<EOF > backend_override.tf
@@ -46,7 +85,6 @@ jobs:
             EOF
       - run: terraform init
       - run: terraform validate
-      - early_return_for_forked_pull_requests
       - run:
           name: terraform plan
           command: terraform plan -var-file=<< parameters.tfvarsfile >> -out=mybuild
