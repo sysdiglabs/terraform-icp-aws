@@ -99,9 +99,11 @@ workflows:
   workflow:
     jobs:
       - build:
+          name: ce-ubuntu
           tfvarsfile: terraform-icp-ce-example.tfvars
       - build:
+          name: ce-rhel
           requires:
-            - build
-          tfvarsfile: terraform-icp-ce-example.tfvars
+            - ce-ubuntu
+          tfvarsfile: terraform-icp-ce-rhel-example.tfvars
       # Repeated as many times as there are configurations...

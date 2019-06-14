@@ -165,30 +165,30 @@ resource "null_resource" "start_install" {
   }
 }
 
-output "ICP Console ELB DNS (internal)" {
+output "icp_concole_host" {
   value = "${aws_lb.icp-console.dns_name}"
 }
 
-output "ICP Proxy ELB DNS (internal)" {
+output "icp_proxy_host" {
   value = "${aws_lb.icp-proxy.dns_name}"
 }
 
-output "ICP Console URL" {
+output "icp_console_url" {
   value = "https://${var.user_provided_cert_dns != "" ? var.user_provided_cert_dns : aws_lb.icp-console.dns_name}:8443"
 }
 
-output "ICP Registry ELB URL" {
+output "icp_registry_url" {
   value = "https://${aws_lb.icp-console.dns_name}:8500"
 }
 
-output "ICP Kubernetes API URL" {
+output "icp_kubernetes_api_url" {
   value = "https://${aws_lb.icp-console.dns_name}:8001"
 }
 
-output "ICP Admin Username" {
+output "icp_admin_username" {
   value = "admin"
 }
 
-output "ICP Admin Password" {
+output "icp_admin_password" {
   value = "${local.icppassword}"
 }
