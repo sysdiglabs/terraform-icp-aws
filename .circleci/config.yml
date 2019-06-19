@@ -109,6 +109,6 @@ workflows:
       - build:
           name: ee-rhel
           requires:
-            - ce-ubuntu
+            - ce-rhel
           tfvarsfile: terraform-icp-ee-rhel-example.tfvars
       # Repeated as many times as there are configurations...
