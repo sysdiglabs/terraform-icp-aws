@@ -64,7 +64,7 @@ if [[ ! -z "${image_location}" ]]; then
   if [[ "${image_location:0:2}" == "s3" ]]; then
     # stream it right out of s3 into docker
     logmsg "Copying binary package from ${image_location} ..."
-    ${awscli} s3 cp ${image_location} /tmp
+    ${awscli} s3 cp ${image_location} /tmp --no-progress
 
     logmsg "Loading docker images from /tmp/`basename ${image_location}` ..."
     tar zxf /tmp/`basename ${image_location}` -O | docker load | tee -a $logfile
@@ -103,7 +103,7 @@ instretval=$?
 
 # backup the config
 logmsg "Backing up the config to the S3 bucket."
-${awscli} s3 sync /opt/ibm/cluster s3://${s3_config_bucket}
+${awscli} s3 sync /opt/ibm/cluster s3://${s3_config_bucket} --no-progress
 
 logmsg "~~~~~~~~ Completed ICP installation Code ~~~~~~~~"
 # Ensure the script exits with the exit code of the ICP installer
