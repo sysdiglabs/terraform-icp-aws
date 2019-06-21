@@ -70,7 +70,7 @@ docker_install() {
     then
       # Figure out what we should name the file
       filename="icp-docker.bin"
-      /usr/local/bin/aws s3 cp ${docker_installer} ${sourcedir}/${filename}
+      /usr/local/bin/aws s3 cp ${docker_installer} ${sourcedir}/${filename} --no-progress
       package_file="${sourcedir}/${filename}"
     fi
 
