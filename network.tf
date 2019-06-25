@@ -48,6 +48,7 @@ resource "aws_subnet" "icp_public_subnet" {
 # Create Elastic IP for NAT gateway in each AZ
 resource "aws_eip" "icp_ngw_eip" {
   count = "${length(var.azs)}"
+  vpc   = "true"
   tags = "${merge(
     var.default_tags,
     map("Name", "${format("${var.subnetname}-${random_id.clusterid.hex}-ngw-eip-%1d", count.index + 1)}"),
